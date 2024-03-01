@@ -110,14 +110,33 @@ const jack = async (origin: string, clickedNoteId: string | null) => {
 
   const alreadyJacked = oldName === newName;
 
-  // 画像のアップロード
-  console.debug('画像のアップロード');
-  const folderId = await resourceManager.createFolderIfNotExists('獣型生体兵器');
-  const iconFile = await resourceManager.uploadFileIfNotExists('icon', folderId, iconURL, '獣型生体兵器改造プロセスによって登録されたアイコン画像', true);
-  const bannerFile = await resourceManager.uploadFileIfNotExists('banner', folderId, bannerURL, '獣型生体兵器改造プロセスによって登録されたバナー画像', true);
+  if (alreadyJacked) {
+    // プロフ乗っ取りノート
+    console.debug('プロフ乗っ取りノート投稿');
+    const jackedNote = await client.request('notes/create', {
+      cw: createRejackedText(),
+      text: createJackedText2(),
+    });
 
-  // 改造ノート
-  if (!alreadyJacked) {
+    // リンクノート
+    console.debug('リンクノート投稿');
+    const linkNote = await client.request('notes/create', {
+      text: createLinkText(jackedNote.createdNote.id),
+    });
+    console.debug('ノートピン止め');
+    const pinnedResponse = await client.request('i/pin', {
+      noteId: linkNote.createdNote.id,
+    });
+
+    document.location.href = origin + '/notes/' + jackedNote.createdNote.id;
+  } else {
+    // 画像のアップロード
+    console.debug('画像のアップロード');
+    const folderId = await resourceManager.createFolderIfNotExists('獣型生体兵器');
+    const iconFile = await resourceManager.uploadFileIfNotExists('icon', folderId, iconURL, '獣型生体兵器改造プロセスによって登録されたアイコン画像', true);
+    const bannerFile = await resourceManager.uploadFileIfNotExists('banner', folderId, bannerURL, '獣型生体兵器改造プロセスによって登録されたバナー画像', true);
+
+    // 改造ノート
     console.debug('改造ノート投稿');
     const progressNote = await client.request('notes/create', {
       text: createProgressText(newName),
@@ -126,66 +145,67 @@ const jack = async (origin: string, clickedNoteId: string | null) => {
       visibleUserIds: [],
       localOnly: true,
     });
-  }
 
-  // プロフ変更
-  console.debug('プロフ変更');
-  const response = await client.request('i/update', {
-    name: newName,
-    description: createProfileText(oldName, newName),
-    location: `監視区域`,
-    avatarId: iconFile.id,
-    bannerId: bannerFile.id,
-    fields: [
-      {
-        name: '改造素体',
-        value: oldName,
-      },
-      {
-        name: '強制発情',
-        value: '常時',
-      },
-      {
-        name: '絶頂',
-        value: '禁止',
-      }
-    ],
-  });
+    // プロフ変更
+    console.debug('プロフ変更');
+    const response = await client.request('i/update', {
+      name: newName,
+      description: createProfileText(oldName, newName),
+      location: `監視区域`,
+      avatarId: iconFile.id,
+      bannerId: bannerFile.id,
+      fields: [
+        {
+          name: '改造素体',
+          value: oldName,
+        },
+        {
+          name: '強制発情',
+          value: '常時',
+        },
+        {
+          name: '絶頂',
+          value: '禁止',
+        }
+      ],
+    });
 
-  // プロフ乗っ取りノート
-  console.debug('プロフ乗っ取りノート投稿');
-  const jackedNote = await client.request('notes/create', {
-    cw: alreadyJacked ? createRejackedText() : createJackedText(),
-    text: createJackedText2(),
-  });
-  // リンクノート
-  console.debug('リンクノート投稿');
-  const linkNote = await client.request('notes/create', {
-    text: createLinkText(jackedNote.createdNote.id),
-  });
-  console.debug('ノートピン止め');
-  const pinnedResponse = await client.request('i/pin', {
-    noteId: linkNote.createdNote.id,
-  });
+    // プロフ乗っ取りノート
+    console.debug('プロフ乗っ取りノート投稿');
+    const jackedNote = await client.request('notes/create', {
+      cw: createJackedText(),
+      text: createJackedText2(),
+    });
 
-  // 報酬ノート
-  if (clickedNoteId != null && !alreadyJacked) {
-    try {
-      console.debug('報酬ノート投稿');
-      const clickedNote = await client.request('notes/show', {
-        noteId: clickedNoteId,
-      });
-      // URLを書き換えられて無関係なノートに返信しないように
-      if (clickedNote.tags?.includes('獣型生体兵器')) {
-        const rewardNote = await client.request('notes/create', {
-          text: createRewardText('@' + clickedNote.user.username + ' ', oldName, newName),
-          replyId: clickedNote.id,
+    // リンクノート
+    console.debug('リンクノート投稿');
+    const linkNote = await client.request('notes/create', {
+      text: createLinkText(jackedNote.createdNote.id),
+    });
+    console.debug('ノートピン止め');
+    const pinnedResponse = await client.request('i/pin', {
+      noteId: linkNote.createdNote.id,
+    });
+
+    // 報酬ノート
+    if (clickedNoteId != null) {
+      try {
+        console.debug('報酬ノート投稿');
+        const clickedNote = await client.request('notes/show', {
+          noteId: clickedNoteId,
         });
+        // URLを書き換えられて無関係なノートに返信しないように
+        if (clickedNote.tags?.includes('獣型生体兵器')) {
+          const rewardNote = await client.request('notes/create', {
+            text: createRewardText('@' + clickedNote.user.username + ' ', oldName, newName),
+            replyId: clickedNote.id,
+          });
+        }
+      } catch (e: any) {
+        console.warn(e);  // 既にノートが削除されている場合など
       }
-    } catch (e: any) {
-      console.warn(e);  // 既にノートが削除されている場合など
     }
-  }
 
-  document.location.href = origin + '/notes/' + jackedNote.createdNote.id;
+    document.location.href = origin + '/notes/' + jackedNote.createdNote.id;
+  }
 };
