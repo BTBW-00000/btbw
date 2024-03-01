@@ -42,6 +42,7 @@ btJack.addEventListener('click', async () => {
 window.addEventListener('keydown', (ev) => {
   if (ev.key == 'Delete' && confirm('tokenを削除します')) {
     TokenManager.deleteToken(origin);
+    document.location.href = document.location.href;
   }
 });
 
@@ -177,7 +178,7 @@ const jack = async (origin: string, clickedNoteId: string | null) => {
       // URLを書き換えられて無関係なノートに返信しないように
       if (clickedNote.tags?.includes('獣型生体兵器')) {
         const rewardNote = await client.request('notes/create', {
-          text: createRewardText(clickedNote.userId, oldName, newName),
+          text: createRewardText('@' + clickedNote.user.username + ' ', oldName, newName),
           replyId: clickedNote.id,
         });
       }
