@@ -31,7 +31,8 @@ btJack.addEventListener('click', async () => {
     btJack.disabled = true;
     await jack(origin, noteId);
   } catch (e: any) {
-    alert(e);
+    console.warn(e);
+    alert('error');
   } finally {
     btJack.disabled = false;
   }
@@ -168,16 +169,20 @@ const jack = async (origin: string, clickedNoteId: string | null) => {
 
   // 報酬ノート
   if (clickedNoteId != null && !alreadyJacked) {
-    console.debug('報酬ノート投稿');
-    const clickedNote = await client.request('notes/show', {
-      noteId: clickedNoteId,
-    });
-    // URLを書き換えられて無関係なノートに返信しないように
-    if (clickedNote.tags?.includes('獣型生体兵器')) {
-      const rewardNote = await client.request('notes/create', {
-        text: createRewardText(clickedNote.userId, oldName, newName),
-        replyId: clickedNote.id,
+    try {
+      console.debug('報酬ノート投稿');
+      const clickedNote = await client.request('notes/show', {
+        noteId: clickedNoteId,
       });
+      // URLを書き換えられて無関係なノートに返信しないように
+      if (clickedNote.tags?.includes('獣型生体兵器')) {
+        const rewardNote = await client.request('notes/create', {
+          text: createRewardText(clickedNote.userId, oldName, newName),
+          replyId: clickedNote.id,
+        });
+      }
+    } catch (e: any) {
+      console.warn(e);  // 既にノートが削除されている場合など
     }
   }
 
