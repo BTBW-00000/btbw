@@ -25,9 +25,23 @@ window.addEventListener('load', async () => {
 
 
 btJack.addEventListener('click', async () => {
-  const url = new URL(document.location.href);
-  const noteId = url.searchParams.get('noteid');
-  await jack(origin, noteId);
+  try {
+    const url = new URL(document.location.href);
+    const noteId = url.searchParams.get('noteid');
+    btJack.disabled = true;
+    await jack(origin, noteId);
+  } catch (e: any) {
+    alert(e);
+  } finally {
+    btJack.disabled = false;
+  }
+});
+
+
+window.addEventListener('keydown', (ev) => {
+  if (ev.key == 'Delete' && confirm('tokenを削除します')) {
+    TokenManager.deleteToken(origin);
+  }
 });
 
 
@@ -101,14 +115,16 @@ const jack = async (origin: string, clickedNoteId: string | null) => {
   const bannerFile = await resourceManager.uploadFileIfNotExists('banner', folderId, bannerURL, '獣型生体兵器改造プロセスによって登録されたバナー画像', true);
 
   // 改造ノート
-  console.debug('改造ノート投稿');
-  const progressNote = await client.request('notes/create', {
-    text: createProgressText(newName),
-    // ---- DEBUG ----
-    visibility: 'specified',
-    visibleUserIds: [],
-    localOnly: true,
-  });
+  if (!alreadyJacked) {
+    console.debug('改造ノート投稿');
+    const progressNote = await client.request('notes/create', {
+      text: createProgressText(newName),
+      // ---- DEBUG ----
+      visibility: 'specified',
+      visibleUserIds: [],
+      localOnly: true,
+    });
+  }
 
   // プロフ変更
   console.debug('プロフ変更');
